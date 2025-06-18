@@ -5,7 +5,8 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) NOT NULL
+    email VARCHAR(100) NOT NULL UNIQUE,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 -- Create books table with owner reference
@@ -15,7 +16,7 @@ CREATE TABLE books (
     author VARCHAR(255) NOT NULL,
     description VARCHAR(2000),
     page_count INTEGER,
-    release_year INTEGER,
+    release_year VARCHAR(4),
     owner_id UUID REFERENCES users(id)
 );
 

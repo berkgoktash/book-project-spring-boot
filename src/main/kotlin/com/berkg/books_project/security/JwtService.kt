@@ -15,6 +15,7 @@ class JwtService {
     private val logger = org.slf4j.LoggerFactory.getLogger(JwtService::class.java)
     private val secretKey = "thisisaverysecureandlongkeythatwillbeusedforjwttokensignature123456789"
     private val validityInMs = 3600000L // 1 hour
+    private val refreshExpirationInMs = 86400000L // 1 day
 
     fun extractUsername(token: String): String {
         val username = extractClaim(token) { obj: Claims -> obj.subject }
@@ -32,8 +33,14 @@ class JwtService {
     }
 
     fun generateToken(extraClaims: Map<String, Any>, username: String): String {
+        return buildToken(extraClaims, username, validityInMs)
+    }
+    fun generateRefreshToken(username: String): String {
+        return buildToken(mapOf(), username, refreshExpirationInMs)
+    }
+    fun buildToken(extraClaims: Map<String, Any>, username: String, expiration: Long): String {
         val now = Date()
-        val validity = Date(now.time + validityInMs)
+        val validity = Date(now.time + expiration)
 
         return Jwts.builder()
             .setClaims(extraClaims)
@@ -48,6 +55,13 @@ class JwtService {
         val username = extractUsername(token)
         val isValid = (username == userDetails.username) && !isTokenExpired(token)
         logger.debug("Token validation - Username from token: $username, Username from userDetails: ${userDetails.username}, Is expired: ${isTokenExpired(token)}, Is valid: $isValid")
+        return isValid
+    }
+
+    fun isRefreshTokenValid(token: String, userDetails: UserDetails): Boolean {
+        val username = extractUsername(token)
+        val isValid = (username == userDetails.username) && !isTokenExpired(token)
+        logger.debug("Refresh token validation - Username from token: $username, Username from userDetails: ${userDetails.username}, Is expired: ${isTokenExpired(token)}, Is valid: $isValid")
         return isValid
     }
 
@@ -75,7 +89,6 @@ class JwtService {
     }
 
     private fun getSigningKey(): Key {
-        // Using the raw bytes directly instead of trying to decode Base64
         return Keys.hmacShaKeyFor(secretKey.toByteArray())
     }
 }

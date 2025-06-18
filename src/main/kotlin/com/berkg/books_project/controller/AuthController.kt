@@ -1,13 +1,12 @@
 package com.berkg.books_project.controller
 
-import com.berkg.books_project.model.User
 import com.berkg.books_project.security.JwtService
 import com.berkg.books_project.service.UserService
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -29,18 +28,32 @@ class AuthController(
     )
 
     data class AuthResponse(
-        val token: String
+        val accessToken: String,
+        val refreshToken: String
+    )
+
+    data class RefreshTokenRequest(
+        val refreshToken: String
     )
 
     @PostMapping("/register")
     fun register(@RequestBody request: RegisterRequest): ResponseEntity<AuthResponse> {
-        val user = userService.createUser(
-            username = request.username,
-            password = request.password,
-            email = request.email
-        )
-        val token = jwtService.generateToken(user.username)
-        return ResponseEntity.ok(AuthResponse(token))
+        try {
+            val user = userService.createUser(
+                username = request.username,
+                password = request.password,
+                email = request.email
+            )
+            val jwtToken = jwtService.generateToken(user.username)
+            val refreshToken = jwtService.generateRefreshToken(user.username)
+            return ResponseEntity.ok(AuthResponse(jwtToken, refreshToken))
+        } catch (e: IllegalArgumentException) {
+            // Handle validation errors (username/email already exists)
+            return ResponseEntity.badRequest().build()
+        } catch (e: Exception) {
+            // Handle other errors (database issues, etc.)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
+        }
     }
 
     @PostMapping("/login")
@@ -48,8 +61,26 @@ class AuthController(
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.username, request.password)
         )
-        val token = jwtService.generateToken(request.username)
-        return ResponseEntity.ok(AuthResponse(token))
+        val jwtToken = jwtService.generateToken(request.username)
+        val refreshToken = jwtService.generateRefreshToken(request.username)
+        return ResponseEntity.ok(AuthResponse(jwtToken, refreshToken))
+    }
+
+    @PostMapping("/refresh-token")
+    fun refreshToken(@RequestBody request: RefreshTokenRequest): ResponseEntity<AuthResponse> {
+        try {
+            val username = jwtService.extractUsername(request.refreshToken)
+            val userDetails = userService.loadUserByUsername(username)
+            if (jwtService.isRefreshTokenValid(request.refreshToken, userDetails)) {
+                val newAccessToken = jwtService.generateToken(username)
+                val newRefreshToken = jwtService.generateRefreshToken(username)
+                return ResponseEntity.ok(AuthResponse(newAccessToken, newRefreshToken))
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+            }
+        } catch (e: Exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+        }
     }
 
     @PostMapping("/logout")

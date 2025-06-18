@@ -20,19 +20,26 @@ class UserService(
 
     @Transactional
     fun createUser(username: String, password: String, email: String): User {
-        // Check if username already exists
-        if (userRepository.existsByUsername(username)) {
-            throw IllegalArgumentException("Username already exists")
-        }
+        try {
+            // Check if username already exists
+            if (userRepository.existsByUsername(username)) {
+                throw IllegalArgumentException("Username already exists")
+            }
 
-        // Check if email already exists
-        if (userRepository.existsByEmail(email)) {
-            throw IllegalArgumentException("Email already exists")
-        }
+            // Check if email already exists
+            if (userRepository.existsByEmail(email)) {
+                throw IllegalArgumentException("Email already exists")
+            }
 
-        val encodedPassword = passwordEncoder.encode(password)
-        val user = User(username = username, password = encodedPassword, email = email)
-        return userRepository.save(user)
+            val encodedPassword = passwordEncoder.encode(password)
+            val user = User(username = username, password = encodedPassword, email = email)
+            val savedUser = userRepository.save(user)
+            logger.debug("Created user: ${savedUser.username} with ID: ${savedUser.id}")
+            return savedUser
+        } catch (e: Exception) {
+            logger.error("Error creating user: ${e.message}", e)
+            throw e
+        }
     }
 
     @Transactional(readOnly = true)

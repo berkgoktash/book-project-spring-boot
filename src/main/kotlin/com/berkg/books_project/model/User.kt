@@ -7,9 +7,8 @@ import java.util.UUID
 @Table(name = "users")
 class User(
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(columnDefinition = "uuid", updatable = false)
-    val id: UUID = UUID.randomUUID(),
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @Column(nullable = false, unique = true)
     val username: String,
@@ -28,7 +27,6 @@ class User(
     val books: MutableList<Book> = mutableListOf()
 
     constructor() : this(
-        id = UUID.randomUUID(),
         username = "",
         password = "",
         email = ""
@@ -41,7 +39,7 @@ class User(
     }
 
     override fun hashCode(): Int {
-        return id.hashCode()
+        return id?.hashCode() ?: 0
     }
 
     override fun toString(): String {
