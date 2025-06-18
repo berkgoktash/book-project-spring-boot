@@ -8,6 +8,7 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import java.time.LocalDateTime
+import java.util.NoSuchElementException
 
 @ControllerAdvice
 class GlobalExceptionHandler {
@@ -19,6 +20,16 @@ class GlobalExceptionHandler {
         val message: String,
         val path: String? = null
     )
+
+    @ExceptionHandler(NoSuchElementException::class)
+    fun handleNoSuchElementException(ex: NoSuchElementException): ResponseEntity<ErrorResponse> {
+        val errorResponse = ErrorResponse(
+            status = HttpStatus.NOT_FOUND.value(),
+            error = "Not Found",
+            message = ex.message ?: "Resource not found"
+        )
+        return ResponseEntity(errorResponse, HttpStatus.NOT_FOUND)
+    }
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> {

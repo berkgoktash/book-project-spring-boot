@@ -15,7 +15,7 @@ CREATE TABLE books (
     author VARCHAR(255) NOT NULL,
     description VARCHAR(2000),
     page_count INTEGER,
-    release_year VARCHAR(4),
+    release_year INTEGER,
     owner_id UUID REFERENCES users(id)
 );
 

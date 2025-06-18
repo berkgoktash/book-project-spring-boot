@@ -2,6 +2,7 @@ package com.berkg.books_project.service
 
 import com.berkg.books_project.model.User
 import com.berkg.books_project.repository.UserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
@@ -13,8 +14,9 @@ import java.util.UUID
 @Service
 class UserService(
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
 ) : UserDetailsService {
+    private val logger = LoggerFactory.getLogger(UserService::class.java)
 
     @Transactional
     fun createUser(username: String, password: String, email: String): User {
@@ -44,10 +46,10 @@ class UserService(
         return userRepository.findByUsername(username)
             .orElseThrow { UsernameNotFoundException("User not found with username: $username") }
     }
-
     @Transactional(readOnly = true)
     override fun loadUserByUsername(username: String): UserDetails {
         val user = getUserByUsername(username)
+        logger.debug("Loaded user: $user")
         return org.springframework.security.core.userdetails.User
             .withUsername(username)
             .password(user.password)

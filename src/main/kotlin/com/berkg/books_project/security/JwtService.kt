@@ -12,12 +12,14 @@ import java.util.Date
 
 @Service
 class JwtService {
-
+    private val logger = org.slf4j.LoggerFactory.getLogger(JwtService::class.java)
     private val secretKey = "thisisaverysecureandlongkeythatwillbeusedforjwttokensignature123456789"
     private val validityInMs = 3600000L // 1 hour
 
     fun extractUsername(token: String): String {
-        return extractClaim(token) { obj: Claims -> obj.subject }
+        val username = extractClaim(token) { obj: Claims -> obj.subject }
+        logger.debug("Extracted username from token: $username")
+        return username
     }
 
     fun <T> extractClaim(token: String, claimsResolver: (Claims) -> T): T {
@@ -44,7 +46,16 @@ class JwtService {
 
     fun isTokenValid(token: String, userDetails: UserDetails): Boolean {
         val username = extractUsername(token)
-        return (username == userDetails.username) && !isTokenExpired(token)
+        val isValid = (username == userDetails.username) && !isTokenExpired(token)
+        logger.debug("Token validation - Username from token: $username, Username from userDetails: ${userDetails.username}, Is expired: ${isTokenExpired(token)}, Is valid: $isValid")
+        return isValid
+    }
+
+    fun invalidateToken(token: String) {
+        // Since we're using stateless JWT, we can't actually invalidate the token
+        // The token will remain valid until it expires
+        // In a real application, you might want to implement a token blacklist
+        // or use a shorter expiration time
     }
 
     private fun isTokenExpired(token: String): Boolean {

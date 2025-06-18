@@ -12,17 +12,18 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class JwtAuthFilter(private val jwtService: JwtService, private val userService: UserService) : OncePerRequestFilter() {
-    private val logger = org.slf4j.LoggerFactory.getLogger(JwtAuthFilter::class.java)
+    private val log = org.slf4j.LoggerFactory.getLogger(JwtAuthFilter::class.java)
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        logger.debug("Processing request to: ${request.method} ${request.requestURI}")
+        log.debug("Processing request to: ${request.method} ${request.requestURI}")
         val authHeader = request.getHeader("Authorization")
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("No valid Authorization header found")
             filterChain.doFilter(request, response)
             return
         }
@@ -30,9 +31,11 @@ class JwtAuthFilter(private val jwtService: JwtService, private val userService:
         try {
             val jwt = authHeader.substring(7)
             val username = jwtService.extractUsername(jwt)
+            log.debug("Extracted username: $username")
 
             if (username.isNotEmpty() && SecurityContextHolder.getContext().authentication == null) {
                 val userDetails = userService.loadUserByUsername(username)
+                log.debug("Loaded user details: $userDetails")
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
                     val authToken = UsernamePasswordAuthenticationToken(
@@ -40,13 +43,18 @@ class JwtAuthFilter(private val jwtService: JwtService, private val userService:
                     )
                     authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
                     SecurityContextHolder.getContext().authentication = authToken
+                    log.debug("Security context set with user: $userDetails")
+                } else {
+                    log.debug("JWT token is not valid")
                 }
+            } else {
+                log.debug("Username is empty or security context already set")
             }
 
             filterChain.doFilter(request, response)
         } catch (e: Exception) {
-            logger.error("Error processing JWT token: ${e.message}", e)
+            log.error("Error processing JWT token: ${e.message}", e)
             filterChain.doFilter(request, response)
         }
-            }
     }
+}
