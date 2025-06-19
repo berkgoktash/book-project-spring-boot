@@ -1,6 +1,7 @@
 package com.berkg.books_project.security
 
 import com.berkg.books_project.service.UserService
+import com.berkg.books_project.service.TokenBlacklistService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -11,7 +12,11 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
-class JwtAuthFilter(private val jwtService: JwtService, private val userService: UserService) : OncePerRequestFilter() {
+class JwtAuthFilter(
+    private val jwtService: JwtService,
+    private val userService: UserService,
+    private val tokenBlacklistService: TokenBlacklistService
+) : OncePerRequestFilter() {
     private val log = org.slf4j.LoggerFactory.getLogger(JwtAuthFilter::class.java)
 
     override fun doFilterInternal(
@@ -30,6 +35,14 @@ class JwtAuthFilter(private val jwtService: JwtService, private val userService:
 
         try {
             val jwt = authHeader.substring(7)
+
+           
+            if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
+                log.debug("JWT token is blacklisted")
+                filterChain.doFilter(request, response)
+                return
+            }
+
             val username = jwtService.extractUsername(jwt)
             log.debug("Extracted username: $username")
 

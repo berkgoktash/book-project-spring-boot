@@ -2,6 +2,7 @@ package com.berkg.books_project.controller
 
 import com.berkg.books_project.security.JwtService
 import com.berkg.books_project.service.UserService
+import com.berkg.books_project.service.TokenBlacklistService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -14,7 +15,8 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val authenticationManager: AuthenticationManager,
     private val userService: UserService,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    private val tokenBlacklistService: TokenBlacklistService
 ) {
     data class RegisterRequest(
         val username: String,
@@ -48,10 +50,10 @@ class AuthController(
             val refreshToken = jwtService.generateRefreshToken(user.username)
             return ResponseEntity.ok(AuthResponse(jwtToken, refreshToken))
         } catch (e: IllegalArgumentException) {
-            // Handle validation errors (username/email already exists)
+            // handle validation errors (username/email already exists)
             return ResponseEntity.badRequest().build()
         } catch (e: Exception) {
-            // Handle other errors (database issues, etc.)
+            // handle other errors
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
         }
     }
@@ -88,8 +90,9 @@ class AuthController(
         val authHeader = request.getHeader("Authorization")
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             val token = authHeader.substring(7)
-            jwtService.invalidateToken(token)
+            val expiration = jwtService.getExpirationMillis(token)
+            tokenBlacklistService.blacklistToken(token, expiration)
         }
-        return ResponseEntity.ok(mapOf("message" to "Logged out successfully. Please delete your token on the client side."))
+        return ResponseEntity.ok(mapOf("message" to "Logged out successfully. The old token is blacklisted."))
     }
 }

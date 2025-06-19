@@ -91,4 +91,11 @@ class JwtService {
     private fun getSigningKey(): Key {
         return Keys.hmacShaKeyFor(secretKey.toByteArray())
     }
+
+    fun getExpirationMillis(token: String): Long {
+        val expirationDate = extractExpiration(token)
+        val now = Date()
+        val diff = expirationDate.time - now.time
+        return if (diff > 0) diff else 0L
+    }
 }
